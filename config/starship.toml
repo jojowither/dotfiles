@@ -1,0 +1,53 @@
+# ~/.config/starship.toml — 類似 Powerlevel10k lean 風格的兩行 prompt
+# 想要更花俏：starship preset gruvbox-rainbow -o ~/.config/starship.toml
+"$schema" = 'https://starship.rs/config-schema.json'
+
+add_newline = true
+format = """
+$os$username$hostname$directory$git_branch$git_status$git_state\
+$python$nodejs$golang$rust$java$docker_context$kubernetes\
+$fill$cmd_duration$time
+$character"""
+
+[os]
+disabled = false
+
+[username]
+show_always = false          # 只有 root 或 SSH 時顯示
+format = '[$user]($style)@'
+
+[hostname]
+ssh_only = true              # 連到 server 時才顯示主機名，一眼分辨在哪台
+format = '[$hostname]($style) '
+style = 'bold yellow'
+
+[directory]
+truncation_length = 4
+truncate_to_repo = false
+style = 'bold cyan'
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+
+[git_status]
+format = '([$all_status$ahead_behind]($style) )'
+
+[fill]
+symbol = ' '
+
+[cmd_duration]
+min_time = 2000
+format = '[ $duration]($style) '
+
+[time]
+disabled = false
+format = '[$time]($style)'
+time_format = '%H:%M'
+style = 'dimmed white'
+
+[kubernetes]
+disabled = false
+
+[character]
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'

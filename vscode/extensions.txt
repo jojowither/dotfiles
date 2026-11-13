@@ -1,0 +1,5 @@
+mechatroner.rainbow-csv
+hediet.vscode-drawio
+shd101wyy.markdown-preview-enhanced
+PKief.material-icon-theme
+tomoki1207.pdf
