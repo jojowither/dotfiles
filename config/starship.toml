@@ -1,53 +1,159 @@
-# ~/.config/starship.toml — 類似 Powerlevel10k lean 風格的兩行 prompt
-# 想要更花俏：starship preset gruvbox-rainbow -o ~/.config/starship.toml
+# ~/.config/starship.toml — 類似 Powerlevel10k rainbow 的兩行 powerline prompt
+#
+#   ╭ 系統/主機 │ 目錄 │ git │ 語言/環境 ▶            耗時 錯誤碼 時間
+#   ╰ ❯
+#
+# - 需要 Nerd Font（Brewfile 已裝 MesloLGS / JetBrainsMono Nerd Font），終端機字型要選它，否則圖示會變方塊。
+# - 顏色用 Catppuccin Mocha，和 config/ghostty/config 的主題一致；想換色只要改最下面的 palette。
+# - 圖示用 \uXXXX 跳脫寫法（TOML 雙引號字串），避免複製貼上時字元跑掉。
+# - 想回到簡潔版：starship preset no-nerd-font -o ~/.config/starship.toml，或看 git 歷史的舊版。
 "$schema" = 'https://starship.rs/config-schema.json'
 
 add_newline = true
+palette = 'catppuccin_mocha'
+
 format = """
-$os$username$hostname$directory$git_branch$git_status$git_state\
+[](fg:surface1)\
+$os$username$hostname\
+[](fg:surface1 bg:blue)\
+$directory\
+[](fg:blue bg:green)\
+$git_branch$git_status$git_state\
+[](fg:green bg:teal)\
 $python$nodejs$golang$rust$java$docker_context$kubernetes\
-$fill$cmd_duration$time
+[](fg:teal)\
+$fill\
+$cmd_duration$status$time
 $character"""
 
+# ---------- 第一段：系統圖示（SSH 時加上 user@host）----------
 [os]
 disabled = false
+style = 'bg:surface1 fg:text'
+format = '[ $symbol ]($style)'
+
+[os.symbols]
+Macos = ""
+Ubuntu = ""
+Debian = ""
+Arch = ""
+Fedora = ""
+Raspbian = ""
+Linux = ""
+Windows = ""
 
 [username]
 show_always = false          # 只有 root 或 SSH 時顯示
-format = '[$user]($style)@'
+style_user = 'bg:surface1 fg:yellow'
+style_root = 'bg:surface1 fg:red bold'
+format = '[$user]($style)'
 
 [hostname]
 ssh_only = true              # 連到 server 時才顯示主機名，一眼分辨在哪台
-format = '[$hostname]($style) '
-style = 'bold yellow'
+ssh_symbol = ''
+style = 'bg:surface1 fg:yellow'
+format = '[@$hostname ]($style)'
 
+# ---------- 第二段：目錄 ----------
 [directory]
+style = 'bg:blue fg:crust bold'
+format = "[ $path ]($style)[$read_only]($read_only_style)"
+read_only = "\U000F033E "
+read_only_style = 'bg:blue fg:red'
 truncation_length = 4
 truncate_to_repo = false
-style = 'bold cyan'
+truncation_symbol = '…/'
 
+[directory.substitutions]
+"Documents" = "\U000F0219"
+"Downloads" = ""
+"Projects" = ""
+
+# ---------- 第三段：git ----------
 [git_branch]
-format = '[$symbol$branch]($style) '
+symbol = ""
+style = 'bg:green fg:crust'
+format = '[ $symbol $branch ]($style)'
 
 [git_status]
-format = '([$all_status$ahead_behind]($style) )'
+style = 'bg:green fg:crust'
+format = '[($all_status$ahead_behind )]($style)'
 
+[git_state]
+style = 'bg:green fg:crust bold'
+format = '[\($state( $progress_current/$progress_total)\) ]($style)'
+
+# ---------- 第四段：語言 / 環境（偵測到才出現）----------
+[python]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $version)( \($virtualenv\)) ]($style)'
+
+[nodejs]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $version) ]($style)'
+
+[golang]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $version) ]($style)'
+
+[rust]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $version) ]($style)'
+
+[java]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $version) ]($style)'
+
+[docker_context]
+symbol = ""
+style = 'bg:teal fg:crust'
+format = '[ $symbol( $context) ]($style)'
+
+[kubernetes]
+disabled = false
+symbol = "\U000F10FE"
+style = 'bg:teal fg:crust'
+format = '[ $symbol $context( \($namespace\)) ]($style)'
+
+# ---------- 右側：耗時、錯誤碼、時間 ----------
 [fill]
 symbol = ' '
 
 [cmd_duration]
 min_time = 2000
-format = '[ $duration]($style) '
+style = 'fg:yellow'
+format = "[ $duration]($style) "
+
+[status]
+disabled = false             # 指令失敗時顯示 exit code，像 p10k
+style = 'fg:red'
+symbol = '✘'
+format = '[$symbol $status]($style) '
 
 [time]
 disabled = false
-format = '[$time]($style)'
+style = 'fg:overlay1'
 time_format = '%H:%M'
-style = 'dimmed white'
+format = "[ $time]($style)"
 
-[kubernetes]
-disabled = false
-
+# ---------- 第二行 ----------
 [character]
 success_symbol = '[❯](bold green)'
 error_symbol = '[❯](bold red)'
+vimcmd_symbol = '[❮](bold green)'
+
+[palettes.catppuccin_mocha]
+text = '#cdd6f4'
+overlay1 = '#7f849c'
+surface1 = '#45475a'
+crust = '#11111b'
+blue = '#89b4fa'
+green = '#a6e3a1'
+teal = '#94e2d5'
+yellow = '#f9e2af'
+red = '#f38ba8'

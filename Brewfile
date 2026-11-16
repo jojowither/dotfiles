@@ -26,6 +26,7 @@ cask "font-jetbrains-mono-nerd-font"
 
 # --- 開發 ---
 cask "visual-studio-code"
+cask "herdr-app"     # Herdr：跑 coding agent 的桌面 app（herdr-core / hc 由 bootstrap.sh 另外裝）
 
 # --- 系統小工具（Mac 專屬）---
 cask "linearmouse"

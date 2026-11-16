@@ -116,6 +116,17 @@ install_linux() {
 }
 
 # ---------------------------------------------------------------- 共用
+# herdr-core（hc）：agent 實際跑在這個背景服務裡，關掉 app 也不會停。
+# Mac 的 Herdr app 由 Brewfile 裝；server 只裝 core，從 Mac 用 `hc machine add` 連過來。
+# 裝好之後由 Herdr 自己更新，這裡只負責第一次安裝。
+install_herdr_core() {
+  log "herdr-core（hc）"
+  if have herdr-core || [[ -x $HOME/.local/bin/herdr-core ]]; then ok "herdr-core 已安裝"; return; fi
+  run mkdir -p "$HOME/.local/bin"
+  run sh -c 'curl -fsSL https://releases.herdr.dev/core/install.sh | HC_INSTALL_DIR="$HOME/.local/bin" sh' \
+    || warn "herdr-core 安裝失敗；Mac 上第一次打開 Herdr 時它也會提示安裝"
+}
+
 install_zsh_plugins() {
   log "zsh 插件（取代 Oh My Zsh）"
   local repo name
@@ -213,6 +224,7 @@ case $OS in
   Linux)  install_linux ;;
   *) warn "不支援的系統：$OS"; exit 1 ;;
 esac
+install_herdr_core
 install_zsh_plugins
 link_configs
 install_vscode_extensions
