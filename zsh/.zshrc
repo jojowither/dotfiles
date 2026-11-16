@@ -68,6 +68,7 @@ have lazygit && alias lg='lazygit'
 alias ..='cd ..' ...='cd ../..'
 
 # ---------- Prompt ----------
+ZLE_RPROMPT_INDENT=0   # 右側 prompt 貼齊視窗邊緣，外框才對得齊（同 p10k）
 have starship && eval "$(starship init zsh)"
 
 # ---------- 本機設定 ----------

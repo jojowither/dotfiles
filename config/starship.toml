@@ -1,7 +1,9 @@
-# ~/.config/starship.toml — 類似 Powerlevel10k rainbow 的兩行 powerline prompt
+# ~/.config/starship.toml — 仿 Powerlevel10k rainbow：兩行、外框、左右兩側都是色塊
 #
-#   ╭ 系統/主機 │ 目錄 │ git │ 語言/環境 ▶            耗時 錯誤碼 時間
-#   ╰ ❯
+#   ╭─ 系統/主機 │ 目錄 │ git │ 語言/環境 ▶ ──────────── ◀ 錯誤碼 ◀ 耗時 ◀ 背景工作 ◀ 時間 ─╮
+#   ╰─ ❯                                                                                    ─╯
+#
+# 右側色塊只在需要時出現：錯誤碼（指令失敗）、耗時（超過 2 秒）、背景工作（有 Ctrl-Z / & 的 job）。
 #
 # - 需要 Nerd Font（Brewfile 已裝 MesloLGS / JetBrainsMono Nerd Font），終端機字型要選它，否則圖示會變方塊。
 # - 顏色用 Catppuccin Mocha，和 config/ghostty/config 的主題一致；想換色只要改最下面的 palette。
@@ -13,7 +15,7 @@ add_newline = true
 palette = 'catppuccin_mocha'
 
 format = """
-[](fg:surface1)\
+[╭─](fg:surface1)[](fg:surface1)\
 $os$username$hostname\
 [](fg:surface1 bg:blue)\
 $directory\
@@ -21,10 +23,14 @@ $directory\
 $git_branch$git_status$git_state\
 [](fg:green bg:teal)\
 $python$nodejs$golang$rust$java$docker_context$kubernetes\
-[](fg:teal)\
+[](fg:teal) \
 $fill\
-$cmd_duration$status$time
-$character"""
+ $status$cmd_duration$jobs$time\
+[─╮](fg:surface1)
+[╰─](fg:surface1)$character"""
+
+# 右邊框的下半段（right_format 只作用在最後一行）
+right_format = '[─╯](fg:surface1)'
 
 # ---------- 第一段：系統圖示（SSH 時加上 user@host）----------
 [os]
@@ -122,24 +128,31 @@ format = '[ $symbol $context( \($namespace\)) ]($style)'
 
 # ---------- 右側：耗時、錯誤碼、時間 ----------
 [fill]
-symbol = ' '
-
-[cmd_duration]
-min_time = 2000
-style = 'fg:yellow'
-format = "[ $duration]($style) "
+symbol = '─'
+style = 'fg:surface1'
 
 [status]
 disabled = false             # 指令失敗時顯示 exit code，像 p10k
-style = 'fg:red'
+style = 'bg:red fg:crust bold'
 symbol = '✘'
-format = '[$symbol $status]($style) '
+format = "[](fg:red)[ $symbol $status ]($style)"
+
+[cmd_duration]
+min_time = 2000
+style = 'bg:yellow fg:crust'
+format = "[](fg:yellow)[ $duration  ]($style)"
+
+[jobs]
+symbol = ""
+number_threshold = 1
+style = 'bg:peach fg:crust'
+format = "[](fg:peach)[ $number $symbol ]($style)"
 
 [time]
 disabled = false
-style = 'fg:overlay1'
-time_format = '%H:%M'
-format = "[ $time]($style)"
+style = 'bg:surface1 fg:text'
+time_format = '%H:%M:%S'
+format = "[](fg:surface1)[ $time  ]($style)"
 
 # ---------- 第二行 ----------
 [character]
@@ -156,4 +169,5 @@ blue = '#89b4fa'
 green = '#a6e3a1'
 teal = '#94e2d5'
 yellow = '#f9e2af'
+peach = '#fab387'
 red = '#f38ba8'
