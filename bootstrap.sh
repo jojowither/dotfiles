@@ -35,7 +35,7 @@ code_cli() {
 # 建 symlink；目標已存在且不是同一個連結時先備份
 link() {
   local src="$1" dst="$2"
-  [[ -e $src ]] || { warn "找不到 $src，略過"; return; }
+  [[ -e $src ]] || { warn "找不到 ${src}，略過"; return; }
   if [[ -L $dst && "$(readlink "$dst")" == "$src" ]]; then ok "$dst 已連結"; return; fi
   run mkdir -p "$(dirname "$dst")"
   if [[ -e $dst || -L $dst ]]; then run mv "$dst" "$dst.bak.$STAMP"; warn "已備份舊的 $dst"; fi
@@ -48,7 +48,7 @@ place() {
   [[ -e $src ]] || return 0
   run mkdir -p "$(dirname "$dst")"
   if [[ -e $dst ]]; then run mv "$dst" "$dst.bak.$STAMP"; warn "已備份舊的 $dst"; fi
-  run cp -R "$src" "$dst"; ok "$dst（複製）"
+  run cp -R "$src" "$dst"; ok "${dst}（複製）"
 }
 
 # ---------------------------------------------------------------- macOS
@@ -84,7 +84,7 @@ install_linux() {
   fi
 
   if [[ -n $pm && ( -n $SUDO || $EUID -eq 0 ) ]]; then
-    log "Linux：系統套件（$pm）"
+    log "Linux：系統套件（${pm}）"
     [[ $pm == apt ]] && run $SUDO apt-get update -qq
     for p in "${pkgs[@]}"; do   # 逐一安裝，舊版發行版缺某個套件也不會整批失敗
       case $pm in
@@ -127,13 +127,21 @@ install_herdr_core() {
     || warn "herdr-core 安裝失敗；Mac 上第一次打開 Herdr 時它也會提示安裝"
 }
 
+# Claude Code CLI：官方 native installer，裝到 ~/.local/bin，之後自己會自動更新
+install_claude_code() {
+  log "Claude Code（claude）"
+  if have claude || [[ -x $HOME/.local/bin/claude ]]; then ok "claude 已安裝"; return; fi
+  run bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
+    || warn "Claude Code 安裝失敗，可手動執行：curl -fsSL https://claude.ai/install.sh | bash"
+}
+
 install_zsh_plugins() {
   log "zsh 插件（取代 Oh My Zsh）"
   local repo name
   for repo in zsh-users/zsh-autosuggestions zsh-users/zsh-syntax-highlighting zsh-users/zsh-completions; do
     name="${repo#*/}"
     if [[ -d $ZPLUGINS/$name/.git ]]; then
-      run git -C "$ZPLUGINS/$name" pull -q --ff-only && ok "$name（已更新）"
+      run git -C "$ZPLUGINS/$name" pull -q --ff-only && ok "${name}（已更新）"
     else
       run mkdir -p "$ZPLUGINS"
       run git clone -q --depth 1 "https://github.com/$repo.git" "$ZPLUGINS/$name" && ok "$name"
@@ -195,7 +203,7 @@ install_vscode_extensions() {
   while IFS= read -r ext; do
     [[ -z $ext || $ext == \#* ]] && continue
     if grep -qx "$(tr '[:upper:]' '[:lower:]' <<<"$ext")" <<<"$installed"; then ok "$ext"
-    else run "$code" --install-extension "$ext" --force >/dev/null && ok "$ext（新安裝）"; fi
+    else run "$code" --install-extension "$ext" --force >/dev/null && ok "${ext}（新安裝）"; fi
   done < "$DOTFILES/vscode/extensions.txt"
 }
 
@@ -212,12 +220,23 @@ backup() {
   log "匯出這台電腦的設定到 $DOTFILES"
   local code; code="$(code_cli)"
   if [[ -n $code ]]; then
-    run sh -c "\"$code\" --list-extensions > \"$DOTFILES/vscode/extensions.txt\""
-    ok "vscode/extensions.txt"
+    # 合併而不是覆蓋：這台沒裝的插件不會從清單消失
+    local list="$DOTFILES/vscode/extensions.txt" current
+    current="$("$code" --list-extensions 2>/dev/null || true)"
+    if [[ -n $current ]]; then
+      if (( DRY_RUN )); then printf '  + merge %s\n' "$list"
+      else { cat "$list" 2>/dev/null; printf '%s\n' "$current"; } | grep -v '^\s*$' | sort -fu -o "$list"; fi
+      ok "vscode/extensions.txt（已合併）"
+    else
+      warn "這台 VS Code 沒有裝插件，extensions.txt 保持不變"
+    fi
   fi
   local vsdir; vsdir="$(vscode_user_dir)"
   for f in settings.json keybindings.json; do
-    [[ -f $vsdir/$f ]] && run cp "$vsdir/$f" "$DOTFILES/vscode/$f" && ok "vscode/$f"
+    [[ -f $vsdir/$f ]] || continue
+    # 只有空的 {} / [] 就不要匯出，免得新電腦的設定被清空
+    if [[ -z "$(tr -d ' \t\n{}[]' < "$vsdir/$f")" ]]; then warn "$f 是空的，略過"; continue; fi
+    run cp "$vsdir/$f" "$DOTFILES/vscode/$f" && ok "vscode/$f"
   done
   if [[ $OS == Darwin ]]; then
     if [[ -d $HOME/.config/karabiner ]]; then
@@ -254,6 +273,7 @@ case $OS in
   *) warn "不支援的系統：$OS"; exit 1 ;;
 esac
 install_herdr_core
+install_claude_code
 install_zsh_plugins
 link_configs
 install_vscode_extensions

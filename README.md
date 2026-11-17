@@ -21,6 +21,7 @@ git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
 | 終端機 | Ghostty（推薦）、iTerm2（現用） | ✓ | — | — | brew cask |
 | Agent | Herdr app | ✓ | — | — | brew cask `herdr-app` |
 | Agent | herdr-core（`hc`） | ✓ | ✓ | ✓ | 官方腳本，裝到 `~/.local/bin`，之後由 Herdr 自動更新 |
+| Agent | Claude Code（`claude`） | ✓ | ✓ | ✓ | 官方 native installer，裝到 `~/.local/bin`，會自動更新 |
 | 字型 | JetBrainsMono / Meslo Nerd Font | ✓ | — | — | brew cask（server 不需要，字型由本機終端負責） |
 | 編輯器 | VS Code + 插件 | ✓ | ✓ | — | cask；插件清單在 `vscode/extensions.txt` |
 | 系統 | LinearMouse、Karabiner-Elements | ✓ | — | — | brew cask，設定從 `mac/` 複製回去 |

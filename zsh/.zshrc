@@ -60,12 +60,16 @@ if have eza; then
 else
   alias ll='ls -lh'; alias la='ls -lah'
 fi
+alias l='la' lsa='la'          # Oh My Zsh 的 l / lsa（ls -lah）
 # 沿用 Oh My Zsh 最常用的 git alias
 alias g='git' gst='git status' ga='git add' gaa='git add --all' gc='git commit -v' \
       gcm='git commit -m' gco='git checkout' gsw='git switch' gb='git branch' \
       gd='git diff' gl='git pull' gp='git push' glog='git log --oneline --graph --decorate'
 have lazygit && alias lg='lazygit'
-alias ..='cd ..' ...='cd ../..'
+alias ..='cd ..' ...='cd ../..' ....='cd ../../..'
+# 其他 Oh My Zsh 內建的目錄 alias
+alias -- -='cd -'
+alias md='mkdir -p' rd='rmdir'
 
 # ---------- Prompt ----------
 ZLE_RPROMPT_INDENT=0   # 右側 prompt 貼齊視窗邊緣，外框才對得齊（同 p10k）
