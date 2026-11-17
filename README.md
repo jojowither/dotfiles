@@ -39,7 +39,8 @@ config/ghostty/config   → ~/.config/ghostty/config（Mac）
 vscode/                 插件清單＋（backup 後）settings / keybindings
 mac/                    Karabiner、LinearMouse 設定（backup 後產生）
 claude/statusline.py    → ~/.claude/statusline.py（symlink，並寫進 ~/.claude/settings.json 的 statusLine）
-herdr/mods/status-bar   → ~/.config/herdr-app/mods/（symlink）底部狀態列：分支、agent、Claude 用量
+herdr/mods/status-bar   → ~/.config/herdr-app/mods/（symlink）底部狀態列：分支、agent、Claude 用量、reset 時間、用完預估
+herdr/mods/agents-plus  → ~/.config/herdr-app/mods/（symlink）內建 agents 列表的複製版，多一行：模型 · ctx % · +改動行數
 herdr/themes/           → ~/.config/herdr-app/themes/（symlink）Catppuccin Mocha
 herdr/layouts/mine.json → ~/.config/herdr-app/layouts/（複製）主題、字型、狀態列都設在這裡
 ```
@@ -48,6 +49,8 @@ herdr/layouts/mine.json → ~/.config/herdr-app/layouts/（複製）主題、字
 
 - 第一次在新電腦打開 Herdr 後，按 `⌘⇧L` 切到 **mine** 版面：Catppuccin Mocha 主題、MesloLGS Nerd Font、自訂狀態列。
 - 狀態列右側的 Claude 用量和 Claude Code 的 `/usage` 一樣（目前 session、本週）。來源是 `claude/statusline.py`：它是 Claude Code 的 status line，每次更新時把官方的 `rate_limits` 存到 `~/.cache/claude-usage/rate_limits.json`，狀態列每 20 秒讀一次。所以要有 Claude Code 在跑、送過訊息，數字才會更新；只有 Pro / Max 訂閱才有這份資料。
+- 用完預估：依最近的用量速度推算。撐得到 reset 顯示 `on track`，撐不到顯示 `limit ~14:20`；取樣不夠（5h 少於 10 分鐘、week 少於 2 小時）就不顯示。取樣存在 `~/.cache/claude-usage/history.json`。
+- Agents 列表：每個 Claude agent 下面多一行 `Opus 5.5 · ctx 42% · +120 −30`（ctx ≥60% 黃、≥80% 紅）。靠 Herdr 設在終端機裡的 `$HC_TERMINAL_ID` 對應，所以只有在 Herdr 裡跑的 Claude 才有；資料在 `~/.cache/claude-usage/agents/`。
 - 提醒：Dock 圖示的紅色數字是在等你的 agent 數；用量超過 80%、95% 各跳一次通知。agent 卡住或做完的音效和通知是 Herdr 內建的（Settings → Alerts）。
 - 改狀態列：改 `herdr/mods/status-bar/main.js` 後跑 `herdr-app check ~/.config/herdr-app/mods/status-bar`。因為是 symlink，Herdr 不會自動重新載入：按兩次 `⌘⇧L`（切到別的版面再切回 mine）就會套用。
 

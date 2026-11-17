@@ -13,17 +13,19 @@ import { spaces, agents, theme, run, window, keys, readTextFile, home, setBadge,
 
 const REFRESH_MS = 20_000;
 const THRESHOLDS = [95, 80];
+// idx：history.json 每筆取樣 [時間, 5h %, 5h 重置, week %, week 重置] 裡的位置
+// lookback / minSpan：拿多久的取樣算速度、至少要涵蓋多久才預估（秒）
 const WINDOWS = [
-  { key: "five_hour", short: "5h", name: "目前 session" },
-  { key: "seven_day", short: "week", name: "本週" },
+  { key: "five_hour", short: "5h", name: "目前 session", idx: 1, lookback: 3600, minSpan: 600 },
+  { key: "seven_day", short: "week", name: "本週", idx: 3, lookback: 86400, minSpan: 7200 },
 ];
 
 const pad = (n) => String(n).padStart(2, "0");
 const resetText = (sec) => {
   const d = new Date(sec * 1000);
   const sameDay = d.toDateString() === new Date().toDateString();
-  const wd = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
-  return `${sameDay ? "" : `週${wd} `}${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const wd = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  return `${sameDay ? "" : `${wd} `}${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 export default class StatusBar extends View {
@@ -43,6 +45,12 @@ export default class StatusBar extends View {
       } catch (_) {
         this.usage = null;
       }
+      try {
+        const text = await readTextFile(`${home()}/.cache/claude-usage/history.json`);
+        this.history = text ? JSON.parse(text) : [];
+      } catch (_) {
+        this.history = [];
+      }
       this.alertIfHigh();
       cx.notify();
     });
@@ -53,6 +61,27 @@ export default class StatusBar extends View {
     if (!w || w.used_percentage == null) return null;
     if (w.resets_at && w.resets_at <= Date.now() / 1000) return 0;
     return Math.round(w.used_percentage);
+  }
+
+  // 照目前速度，會不會在重置前用完？
+  //   { kind: "limit", at: 秒 }  會在 at 用完
+  //   { kind: "ok" }             撐得到重置
+  //   null                       取樣不夠，不猜
+  forecast(win, w) {
+    const pct = this.pct(w);
+    if (pct == null || !w.resets_at || pct === 0) return null;
+    if (pct >= 100) return { kind: "limit", at: Date.now() / 1000 };
+    const now = Date.now() / 1000;
+    const samples = (this.history ?? []).filter((s) =>
+      s[win.idx + 1] === w.resets_at && s[win.idx] != null && now - s[0] <= win.lookback);
+    if (samples.length < 2) return null;
+    const first = samples[0], last = samples[samples.length - 1];
+    const span = last[0] - first[0];
+    if (span < win.minSpan) return null;
+    const rate = (last[win.idx] - first[win.idx]) / span; // % / 秒
+    if (rate <= 0) return { kind: "ok" };
+    const at = now + (100 - pct) / rate;
+    return at < w.resets_at ? { kind: "limit", at } : { kind: "ok" };
   }
 
   alertIfHigh() {
@@ -66,8 +95,8 @@ export default class StatusBar extends View {
       const seenKey = `alert:${win.key}:${w.resets_at}:${level}`;
       try { if (localStorage.getItem(seenKey)) continue; localStorage.setItem(seenKey, "1"); } catch (_) {}
       notify({
-        title: `Claude ${win.name}用量 ${pct}%`,
-        body: `${resetText(w.resets_at)} 重置`,
+        title: `Claude ${win.short} usage ${pct}%`,
+        body: `reset ${resetText(w.resets_at)}`,
         level: level >= 95 ? "error" : "warning",
         timeout: 8000,
       });
@@ -88,14 +117,24 @@ export default class StatusBar extends View {
     return key ? `${key}  commands` : "commands";
   }
 
+  // 5h ▬ 17% · reset 15:40 · on track
   usageItem(t, win, w) {
     const pct = this.pct(w);
     const color = pct == null ? t.dim : pct >= 90 ? t.blocked : pct >= 70 ? t.ansi3 : t.accent;
+    const fc = this.forecast(win, w);
+    const expired = w?.resets_at && w.resets_at <= Date.now() / 1000;
+    const dot = () => div().text_color(t.border).child("·");
     return h_flex().gap(6).items_center()
       .child(div().text_color(t.dim).child(win.short))
       .child(div().w(36).h(4).rounded(2).bg(t.border)
         .child(div().h(4).rounded(2).bg(color).w(Math.round((36 * (pct ?? 0)) / 100))))
-      .child(div().text_color(pct != null && pct >= 70 ? color : t.muted).child(pct == null ? "—" : `${pct}%`));
+      .child(div().text_color(pct != null && pct >= 70 ? color : t.muted).child(pct == null ? "—" : `${pct}%`))
+      .when(Boolean(w?.resets_at) && !expired, (el) => el.child(dot())
+        .child(div().text_color(t.dim).child(`reset ${resetText(w.resets_at)}`)))
+      .when(Boolean(fc), (el) => el.child(dot())
+        .child(fc.kind === "ok"
+          ? div().text_color(t.ansi2).child("on track")
+          : div().text_color(fc.at - Date.now() / 1000 < 3600 ? t.blocked : t.ansi3).child(`limit ~${resetText(fc.at)}`)));
   }
 
   render() {
