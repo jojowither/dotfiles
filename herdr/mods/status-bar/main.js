@@ -15,7 +15,7 @@ const REFRESH_MS = 20_000;
 const THRESHOLDS = [95, 80];
 const WINDOWS = [
   { key: "five_hour", short: "5h", name: "目前 session" },
-  { key: "seven_day", short: "週", name: "本週" },
+  { key: "seven_day", short: "week", name: "本週" },
 ];
 
 const pad = (n) => String(n).padStart(2, "0");
