@@ -38,7 +38,16 @@ config/starship.toml    → ~/.config/starship.toml
 config/ghostty/config   → ~/.config/ghostty/config（Mac）
 vscode/                 插件清單＋（backup 後）settings / keybindings
 mac/                    Karabiner、LinearMouse 設定（backup 後產生）
+claude/statusline.py    → ~/.claude/statusline.py（symlink，並寫進 ~/.claude/settings.json 的 statusLine）
+herdr/mods/claude-usage → ~/.config/herdr-app/mods/（symlink）Claude 用量面板
+herdr/layouts/mine.json → ~/.config/herdr-app/layouts/（複製）側邊欄多了用量面板的版面
 ```
+
+## Herdr
+
+- 第一次在新電腦打開 Herdr 後，按 `⌘⇧L` 切到 **mine** 版面，左下角會出現 Claude 用量面板。
+- 面板數字和 Claude Code 的 `/usage` 一樣（目前 session、本週的百分比與重置時間）。來源是 `claude/statusline.py`：它是 Claude Code 的 status line，每次更新時把官方的 `rate_limits` 存到 `~/.cache/claude-usage/rate_limits.json`，面板每 20 秒讀一次。所以要有 Claude Code 在跑、送過訊息，數字才會更新；只有 Pro / Max 訂閱才有這份資料。
+- 改面板：改 `herdr/mods/claude-usage/main.js` 後跑 `herdr-app check ~/.config/herdr-app/mods/claude-usage`。因為是 symlink，Herdr 不會自動重新載入：按兩次 `⌘⇧L`（切到別的版面再切回 mine）就會套用。
 
 ## 機器專屬設定
 

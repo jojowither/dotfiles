@@ -1,2 +1,5 @@
 .DS_Store
 *.bak.*
+# Herdr 每次啟動都會重寫進 mod 資料夾的型別檔
+herdr/mods/*/*.d.ts
+herdr/mods/*/jsconfig.json

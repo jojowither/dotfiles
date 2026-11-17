@@ -141,6 +141,20 @@ install_zsh_plugins() {
   done
 }
 
+# 在 ~/.claude/settings.json 加上 statusLine（已經有自訂的就不動）
+enable_claude_statusline() {
+  local f="$HOME/.claude/settings.json"
+  have python3 || { warn "沒有 python3，略過 Claude status line"; return; }
+  if [[ -f $f ]] && grep -q '"statusLine"' "$f"; then ok "Claude statusLine 已設定（不覆蓋）"; return; fi
+  run mkdir -p "$HOME/.claude"
+  [[ -f $f ]] && run cp "$f" "$f.bak.$STAMP"
+  run python3 -c 'import json,os,sys
+p=sys.argv[1]; s=json.load(open(p)) if os.path.exists(p) else {}
+s["statusLine"]={"type":"command","command":"~/.claude/statusline.py"}
+open(p,"w").write(json.dumps(s,indent=2,ensure_ascii=False)+"\n")' "$f"
+  ok "Claude statusLine -> ~/.claude/statusline.py"
+}
+
 link_configs() {
   log "連結設定檔"
   link "$DOTFILES/zsh/.zshrc"          "$HOME/.zshrc"
@@ -150,7 +164,19 @@ link_configs() {
     link  "$DOTFILES/config/ghostty/config"  "$HOME/.config/ghostty/config"
     place "$DOTFILES/mac/karabiner"          "$HOME/.config/karabiner"
     place "$DOTFILES/mac/linearmouse.json"   "$HOME/.config/linearmouse/linearmouse.json"
+
+    # Herdr：自己寫的 mod 用 symlink（改 repo 即時生效）；layout 用複製，因為 Herdr 會自己改寫它
+    local herdr="$HOME/.config/herdr-app" m
+    for m in "$DOTFILES"/herdr/mods/*/; do
+      m="${m%/}"; link "$m" "$herdr/mods/$(basename "$m")"
+    done
+    if [[ -e $herdr/layouts/mine.json ]]; then ok "$herdr/layouts/mine.json 已存在（不覆蓋）"
+    else place "$DOTFILES/herdr/layouts/mine.json" "$herdr/layouts/mine.json"; fi
   fi
+
+  # Claude Code status line：顯示用量，也把官方 rate_limits 存給 Herdr 面板
+  link "$DOTFILES/claude/statusline.py" "$HOME/.claude/statusline.py"
+  enable_claude_statusline
 
   local vsdir; vsdir="$(vscode_user_dir)"
   place "$DOTFILES/vscode/settings.json"    "$vsdir/settings.json"
