@@ -170,6 +170,9 @@ link_configs() {
     for m in "$DOTFILES"/herdr/mods/*/; do
       m="${m%/}"; link "$m" "$herdr/mods/$(basename "$m")"
     done
+    for m in "$DOTFILES"/herdr/themes/*.json; do
+      link "$m" "$herdr/themes/$(basename "$m")"
+    done
     if [[ -e $herdr/layouts/mine.json ]]; then ok "$herdr/layouts/mine.json 已存在（不覆蓋）"
     else place "$DOTFILES/herdr/layouts/mine.json" "$herdr/layouts/mine.json"; fi
   fi

@@ -50,16 +50,6 @@
           ]
         },
         {
-          "id": "claude-usage",
-          "type": "block",
-          "size": {
-            "px": 160
-          },
-          "content": {
-            "mod": "claude-usage"
-          }
-        },
-        {
           "id": "sidebar-footer",
           "type": "block",
           "content": {
@@ -170,7 +160,7 @@
           "id": "status",
           "type": "block",
           "content": {
-            "mod": "workspace-status"
+            "mod": "status-bar"
           },
           "size": {
             "px": 28
@@ -193,5 +183,9 @@
   "traffic_lights": [
     12,
     16
-  ]
+  ],
+  "theme": "catppuccin-mocha",
+  "font": "MesloLGS Nerd Font Mono",
+  "font_size": 14,
+  "ui_font": "Geist"
 }
