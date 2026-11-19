@@ -53,9 +53,11 @@ have fdfind && ! have fd  && alias fd=fdfind
 
 # ---------- Aliases ----------
 if have eza; then
-  # 權限欄（r 黃 / w 紅 / x 綠 / - 灰）、資料夾 d 藍：明確寫死 eza 的預設配色，
-  # 讓每台機器都一樣，不受其他地方設的 EZA_COLORS / LS_COLORS 影響
-  export EZA_COLORS='di=1;34:ur=1;33:uw=1;31:ux=1;4;32:ue=1;32:gr=33:gw=31:gx=32:tr=33:tw=31:tx=32:su=1;35:sf=1;35:xx=1;90'
+  # 每台都用 eza 的全套預設配色（權限、大小、使用者、日期、git、檔名）：
+  # 清掉別處設的顏色變數，主題檔位置統一到 ~/.config/eza（Mac 預設在 ~/Library），
+  # 那裡不放 theme.yml 就是預設配色
+  unset EZA_COLORS LS_COLORS
+  export EZA_CONFIG_DIR="$HOME/.config/eza"
   alias ls='eza --group-directories-first --icons=auto'
   alias ll='eza -l --git --group-directories-first --icons=auto'
   alias la='eza -la --git --group-directories-first --icons=auto'
