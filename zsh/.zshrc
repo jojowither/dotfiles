@@ -53,6 +53,9 @@ have fdfind && ! have fd  && alias fd=fdfind
 
 # ---------- Aliases ----------
 if have eza; then
+  # 權限欄（r 黃 / w 紅 / x 綠 / - 灰）、資料夾 d 藍：明確寫死 eza 的預設配色，
+  # 讓每台機器都一樣，不受其他地方設的 EZA_COLORS / LS_COLORS 影響
+  export EZA_COLORS='di=1;34:ur=1;33:uw=1;31:ux=1;4;32:ue=1;32:gr=33:gw=31:gx=32:tr=33:tw=31:tx=32:su=1;35:sf=1;35:xx=1;90'
   alias ls='eza --group-directories-first --icons=auto'
   alias ll='eza -l --git --group-directories-first --icons=auto'
   alias la='eza -la --git --group-directories-first --icons=auto'
