@@ -17,8 +17,7 @@ brew "tlrc"          # tldr
 brew "mas"           # 從 App Store 安裝 app 用
 
 # --- 終端機 ---
-cask "ghostty"       # 推薦的新終端機
-cask "iterm2"        # 目前習慣用的；確定改用 Ghostty 後可刪掉這行
+cask "ghostty"       # 主要終端機，設定在 config/ghostty/config
 
 # --- 字型（Starship/eza 圖示需要 Nerd Font）---
 cask "font-meslo-lg-nerd-font"

@@ -18,7 +18,7 @@ git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
 | Prompt | Starship（取代 Powerlevel10k） | ✓ | ✓ | ✓ | brew / 官方腳本，裝到 `~/.local/bin` |
 | CLI | fzf、zoxide、ripgrep、fd、bat、eza、btop、jq | ✓ | ✓ | ✓ | brew / apt·dnf·pacman |
 | CLI | lazygit、git-delta、tldr | ✓ | △ | △ | Mac: brew；Linux 只有 pacman 會自動裝 |
-| 終端機 | Ghostty（推薦）、iTerm2（現用） | ✓ | — | — | brew cask |
+| 終端機 | Ghostty | ✓ | — | — | brew cask |
 | Agent | Herdr app | ✓ | — | — | brew cask `herdr-app` |
 | Agent | herdr-core（`hc`） | ✓ | ✓ | ✓ | 官方腳本，裝到 `~/.local/bin`，之後由 Herdr 自動更新 |
 | Agent | Claude Code（`claude`） | ✓ | ✓ | ✓ | 官方 native installer，裝到 `~/.local/bin`，會自動更新 |

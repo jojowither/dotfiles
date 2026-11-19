@@ -1,7 +1,29 @@
-font-family = JetBrainsMono Nerd Font
+# 字型：brew cask font-jetbrains-mono-nerd-font 只裝 Mono 版
+font-family = JetBrainsMono Nerd Font Mono
 font-size = 14
+
+# 主題：Catppuccin Mocha，背景調深，和 Herdr 的 catppuccin-mocha 一致
 theme = Catppuccin Mocha
+background = #141418
+selection-background = #3a3a44
+
 window-padding-x = 8
 window-padding-y = 6
+# 重開時還原視窗和分頁
+window-save-state = always
+# 分頁放在標題列，省一行空間
+macos-titlebar-style = tabs
+# Option 當 Alt 用（zsh 的 Alt+←/→ 跳字）
 macos-option-as-alt = true
 shell-integration = zsh
+# 選取即複製（同 iTerm2 預設）
+copy-on-select = clipboard
+confirm-close-surface = false
+
+# 快捷鍵：沿用 iTerm2 的分割習慣
+keybind = cmd+d=new_split:right
+keybind = cmd+shift+d=new_split:down
+keybind = cmd+alt+left=goto_split:left
+keybind = cmd+alt+right=goto_split:right
+keybind = cmd+alt+up=goto_split:up
+keybind = cmd+alt+down=goto_split:down

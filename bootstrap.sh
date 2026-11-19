@@ -280,4 +280,4 @@ install_vscode_extensions
 set_default_shell
 
 log "全部完成！開新的終端機視窗（或執行 exec zsh）就會套用。"
-[[ $OS == Darwin ]] && echo "   Ghostty/iTerm2 的字型請選 JetBrainsMono Nerd Font 或 MesloLGS Nerd Font。"
+[[ $OS == Darwin ]] && echo "   Ghostty 的字型請選 JetBrainsMono Nerd Font 或 MesloLGS Nerd Font。"
