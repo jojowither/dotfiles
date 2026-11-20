@@ -1,6 +1,6 @@
 # dotfiles
 
-換電腦／開新 server 時一鍵重建開發環境。
+換電腦／開新 server 時一鍵建立初始開發環境。
 
 ```bash
 git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
@@ -8,7 +8,14 @@ git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
 ./bootstrap.sh
 ```
 
-舊電腦上先跑 `./bootstrap.sh --backup`，把 Karabiner / LinearMouse / VS Code 設定匯出進 repo，再 commit。
+**設定是用「複製」的，不是連結。** repo 只是新環境的起點：設定檔複製過去之後，每台各自修改、各自發展，改了不會影響 repo 或別台；安裝程式自己往 `~/.zshrc` 加東西也只影響那一台。
+
+| 指令 | 用途 |
+|---|---|
+| `./bootstrap.sh` | 裝工具、複製設定。這台已經有的設定檔不覆蓋，所以可以放心重跑 |
+| `./bootstrap.sh --diff` | repo 更新後，看這台和 repo 哪些設定不一樣、差在哪，再自己決定要不要手動跟上 |
+| `./bootstrap.sh --force` | 和 repo 不同的設定檔也用 repo 版本覆蓋（舊的備份成 `*.bak.<時間>`） |
+| `./bootstrap.sh --backup` | 反過來：某台試出喜歡的設定，存回 repo 當下一台的初始設定。之後先 `git diff` 挑過再 commit |
 
 ## 盤點
 
@@ -31,19 +38,21 @@ VS Code 插件：rainbow-csv、drawio、markdown-preview-enhanced、material-ico
 
 ## 檔案
 
+以下設定都會複製到右邊的位置：
+
 ```
 bootstrap.sh            主腳本（自動判斷 macOS / Linux，可重複執行）
 Brewfile                Mac 套件清單
-zsh/.zshrc              → ~/.zshrc（symlink）
+zsh/.zshrc              → ~/.zshrc
 config/starship.toml    → ~/.config/starship.toml
 config/ghostty/config   → ~/.config/ghostty/config（Mac）
 vscode/                 插件清單＋（backup 後）settings / keybindings
 mac/                    Karabiner、LinearMouse 設定（backup 後產生）
-claude/statusline.py    → ~/.claude/statusline.py（symlink，並寫進 ~/.claude/settings.json 的 statusLine）
-herdr/mods/status-bar   → ~/.config/herdr-app/mods/（symlink）底部狀態列：分支、agent、Claude 用量、reset 時間、用完預估
-herdr/mods/agents-plus  → ~/.config/herdr-app/mods/（symlink）內建 agents 列表的複製版，多一行：模型 · ctx % · +改動行數
-herdr/themes/           → ~/.config/herdr-app/themes/（symlink）Catppuccin Mocha
-herdr/layouts/mine.json → ~/.config/herdr-app/layouts/（複製）主題、字型、狀態列都設在這裡
+claude/statusline.py    → ~/.claude/statusline.py（並寫進 ~/.claude/settings.json 的 statusLine）
+herdr/mods/status-bar   → ~/.config/herdr-app/mods/底部狀態列：分支、agent、Claude 用量、reset 時間、用完預估
+herdr/mods/agents-plus  → ~/.config/herdr-app/mods/內建 agents 列表的複製版，多一行：模型 · ctx % · +改動行數
+herdr/themes/           → ~/.config/herdr-app/themes/Catppuccin Mocha
+herdr/layouts/mine.json → ~/.config/herdr-app/layouts/主題、字型、狀態列都設在這裡
 ```
 
 ## Herdr
@@ -53,11 +62,11 @@ herdr/layouts/mine.json → ~/.config/herdr-app/layouts/（複製）主題、字
 - 用完預估：依最近的用量速度推算。撐得到 reset 顯示 `on track`，撐不到顯示 `limit ~14:20`；取樣不夠（5h 少於 10 分鐘、week 少於 2 小時）就不顯示。取樣存在 `~/.cache/claude-usage/history.json`。
 - Agents 列表：每個 Claude agent 下面多一行 `Opus 5.5 · ctx 42% · +120 −30`（ctx ≥60% 黃、≥80% 紅）。靠 Herdr 設在終端機裡的 `$HC_TERMINAL_ID` 對應，所以只有在 Herdr 裡跑的 Claude 才有；資料在 `~/.cache/claude-usage/agents/`。
 - 提醒：Dock 圖示的紅色數字是在等你的 agent 數；用量超過 80%、95% 各跳一次通知。agent 卡住或做完的音效和通知是 Herdr 內建的（Settings → Alerts）。
-- 改狀態列：改 `herdr/mods/status-bar/main.js` 後跑 `herdr-app check ~/.config/herdr-app/mods/status-bar`。因為是 symlink，Herdr 不會自動重新載入：按兩次 `⌘⇧L`（切到別的版面再切回 mine）就會套用。
+- 改狀態列：直接改這台的 `~/.config/herdr-app/mods/status-bar/main.js`，Herdr 會自動重新載入；跑 `herdr-app check ~/.config/herdr-app/mods/status-bar` 可檢查有沒有寫錯。想讓下一台也用，再 `./bootstrap.sh --backup` 存回 repo。
 
 ## 機器專屬設定
 
-不想進 repo 的東西（API key、nvm、某台機器才有的 PATH）放 `~/.zshrc.local`，`.zshrc` 會自動載入。例如目前這台：
+`~/.zshrc` 是各台自己的檔案，直接改就好。只有 API key 這類不能進 repo 的東西建議放 `~/.zshrc.local`（`.zshrc` 會自動載入），之後跑 `--backup` 存回 repo 時才不會被一起帶進去。例如：
 
 ```zsh
 export PATH="$HOME/.gemini/antigravity/bin:$PATH"

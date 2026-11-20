@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # 一鍵建立開發環境（macOS / Linux / server）
 #
-#   ./bootstrap.sh            安裝並套用設定
-#   ./bootstrap.sh --dry-run  只印出會做的事，不實際執行
-#   ./bootstrap.sh --backup   把這台電腦目前的 GUI app 設定匯出到 repo（舊電腦上跑）
+#   ./bootstrap.sh            安裝工具，把 repo 的設定「複製」到這台（已有的檔案不覆蓋）
+#   ./bootstrap.sh --force    同上，但和 repo 不同的設定檔也用 repo 版本覆蓋（舊的備份成 *.bak.<時間>）
+#   ./bootstrap.sh --diff     列出這台和 repo 哪些設定不一樣、差在哪（不改任何東西）
+#   ./bootstrap.sh --backup   反過來：把這台的設定存回 repo，當作下一台的初始設定
+#   ./bootstrap.sh --dry-run  只印出會做的事，不實際執行（可和上面任一個一起用）
 #
-# 可以重複執行：已裝好的會略過，原本的設定檔會備份成 *.bak.<時間>。
+# repo 是新環境的初始設定；複製過去之後由各台自己維護，彼此不會互相影響。
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OS="$(uname -s)"
 DRY_RUN=0
+FORCE=0
 STAMP="$(date +%Y%m%d-%H%M%S)"
 ZPLUGINS="${XDG_DATA_HOME:-$HOME/.local/share}/zsh/plugins"
 
@@ -32,23 +35,54 @@ code_cli() {
   fi
 }
 
-# 建 symlink；目標已存在且不是同一個連結時先備份
-link() {
-  local src="$1" dst="$2"
-  [[ -e $src ]] || { warn "找不到 ${src}，略過"; return; }
-  if [[ -L $dst && "$(readlink "$dst")" == "$src" ]]; then ok "$dst 已連結"; return; fi
-  run mkdir -p "$(dirname "$dst")"
-  if [[ -e $dst || -L $dst ]]; then run mv "$dst" "$dst.bak.$STAMP"; warn "已備份舊的 $dst"; fi
-  run ln -s "$src" "$dst"; ok "$dst -> $src"
-}
+# 比較時忽略 Herdr 自動產生的型別檔
+same() { diff -rq -x '*.d.ts' -x jsconfig.json -x .DS_Store "$1" "$2" >/dev/null 2>&1; }
+# 是不是舊做法留下的、指向 repo 的 symlink
+linked() { [[ -L $1 && "$(readlink "$1")" == "$DOTFILES"/* ]]; }
 
-# 複製（給會自己覆寫設定檔、不適合 symlink 的 GUI app）
+# 把 repo 的設定複製到這台。這台已經有、而且內容不同時保留這台的版本（除非 --force）
 place() {
   local src="$1" dst="$2"
   [[ -e $src ]] || return 0
-  run mkdir -p "$(dirname "$dst")"
-  if [[ -e $dst ]]; then run mv "$dst" "$dst.bak.$STAMP"; warn "已備份舊的 $dst"; fi
-  run cp -R "$src" "$dst"; ok "${dst}（複製）"
+  if linked "$dst"; then
+    run rm "$dst"; run cp -R "$src" "$dst"; ok "${dst}（原本連結到 repo，改成複製）"; return
+  fi
+  if [[ ! -e $dst ]]; then
+    run mkdir -p "$(dirname "$dst")"; run cp -R "$src" "$dst"; ok "${dst}（新增）"; return
+  fi
+  if same "$src" "$dst"; then ok "${dst}（和 repo 相同）"; return; fi
+  if (( FORCE )); then
+    run mv "$dst" "$dst.bak.$STAMP"; run cp -R "$src" "$dst"
+    warn "${dst}：已用 repo 版本覆蓋，舊的在 $dst.bak.$STAMP"
+  else
+    ok "${dst}（這台改過，保留；--diff 看差異）"
+  fi
+}
+
+# 所有設定檔：「repo 內路徑|這台的路徑」，安裝、--diff、--backup 共用這份清單
+config_pairs() {
+  local cfg="${XDG_CONFIG_HOME:-$HOME/.config}" m
+  echo "zsh/.zshrc|$HOME/.zshrc"
+  echo "config/starship.toml|$cfg/starship.toml"
+  echo "claude/statusline.py|$HOME/.claude/statusline.py"
+  if [[ $OS == Darwin ]]; then
+    echo "config/ghostty/config|$HOME/.config/ghostty/config"
+    echo "mac/karabiner/karabiner.json|$HOME/.config/karabiner/karabiner.json"
+    [[ -e $DOTFILES/mac/karabiner/assets || -d $HOME/.config/karabiner/assets ]] && \
+      echo "mac/karabiner/assets|$HOME/.config/karabiner/assets"
+    echo "mac/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json"
+    local herdr="$HOME/.config/herdr-app"
+    for m in "$DOTFILES"/herdr/mods/*/; do
+      m="$(basename "$m")"; echo "herdr/mods/$m|$herdr/mods/$m"
+    done
+    for m in "$DOTFILES"/herdr/themes/*.json; do
+      m="$(basename "$m")"; echo "herdr/themes/$m|$herdr/themes/$m"
+    done
+    echo "herdr/layouts/mine.json|$herdr/layouts/mine.json"
+  fi
+  local vsdir; vsdir="$(vscode_user_dir)"
+  echo "vscode/settings.json|$vsdir/settings.json"
+  echo "vscode/keybindings.json|$vsdir/keybindings.json"
 }
 
 # ---------------------------------------------------------------- macOS
@@ -163,35 +197,36 @@ open(p,"w").write(json.dumps(s,indent=2,ensure_ascii=False)+"\n")' "$f"
   ok "Claude statusLine -> ~/.claude/statusline.py"
 }
 
-link_configs() {
-  log "連結設定檔"
-  link "$DOTFILES/zsh/.zshrc"          "$HOME/.zshrc"
-  link "$DOTFILES/config/starship.toml" "${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml"
-
-  if [[ $OS == Darwin ]]; then
-    link  "$DOTFILES/config/ghostty/config"  "$HOME/.config/ghostty/config"
-    place "$DOTFILES/mac/karabiner"          "$HOME/.config/karabiner"
-    place "$DOTFILES/mac/linearmouse.json"   "$HOME/.config/linearmouse/linearmouse.json"
-
-    # Herdr：自己寫的 mod 用 symlink（改 repo 即時生效）；layout 用複製，因為 Herdr 會自己改寫它
-    local herdr="$HOME/.config/herdr-app" m
-    for m in "$DOTFILES"/herdr/mods/*/; do
-      m="${m%/}"; link "$m" "$herdr/mods/$(basename "$m")"
-    done
-    for m in "$DOTFILES"/herdr/themes/*.json; do
-      link "$m" "$herdr/themes/$(basename "$m")"
-    done
-    if [[ -e $herdr/layouts/mine.json ]]; then ok "$herdr/layouts/mine.json 已存在（不覆蓋）"
-    else place "$DOTFILES/herdr/layouts/mine.json" "$herdr/layouts/mine.json"; fi
-  fi
-
-  # Claude Code status line：顯示用量，也把官方 rate_limits 存給 Herdr 面板
-  link "$DOTFILES/claude/statusline.py" "$HOME/.claude/statusline.py"
+install_configs() {
+  log "複製設定檔（已有的不覆蓋$( (( FORCE )) && echo '；--force：不同的會覆蓋')）"
+  local src dst
+  while IFS='|' read -r src dst; do
+    place "$DOTFILES/$src" "$dst"
+  done < <(config_pairs)
+  # Claude Code status line：顯示用量，也把官方 rate_limits 存給 Herdr 狀態列
   enable_claude_statusline
+}
 
-  local vsdir; vsdir="$(vscode_user_dir)"
-  place "$DOTFILES/vscode/settings.json"    "$vsdir/settings.json"
-  place "$DOTFILES/vscode/keybindings.json" "$vsdir/keybindings.json"
+# ---------------------------------------------------------------- 比較（--diff）
+diff_configs() {
+  log "這台和 repo 的設定差異（- 這台   + repo）"
+  local src dst n_same=0 n_diff=0
+  while IFS='|' read -r src dst; do
+    [[ -e $DOTFILES/$src ]] || continue
+    if linked "$dst"; then
+      warn "$dst 連結到 repo（舊做法；重跑 bootstrap 會改成複製）"
+    elif [[ ! -e $dst ]]; then
+      warn "$dst 這台沒有（重跑 bootstrap 會補上）"; n_diff=$((n_diff + 1))
+    elif same "$DOTFILES/$src" "$dst"; then
+      n_same=$((n_same + 1))
+    else
+      n_diff=$((n_diff + 1))
+      printf '\n\033[1;33m≠ %s\033[0m  ↔  repo/%s\n' "$dst" "$src"
+      diff -ru -x '*.d.ts' -x jsconfig.json -x .DS_Store "$dst" "$DOTFILES/$src" | sed 's/^/    /' || true
+    fi
+  done < <(config_pairs)
+  echo
+  ok "$n_same 個和 repo 相同，$n_diff 個不同"
 }
 
 install_vscode_extensions() {
@@ -238,33 +273,37 @@ backup() {
     if [[ -z "$(tr -d ' \t\n{}[]' < "$vsdir/$f")" ]]; then warn "$f 是空的，略過"; continue; fi
     run cp "$vsdir/$f" "$DOTFILES/vscode/$f" && ok "vscode/$f"
   done
-  if [[ $OS == Darwin ]]; then
-    if [[ -d $HOME/.config/karabiner ]]; then
-      run rm -rf "$DOTFILES/mac/karabiner"
-      run mkdir -p "$DOTFILES/mac/karabiner"
-      run cp "$HOME/.config/karabiner/karabiner.json" "$DOTFILES/mac/karabiner/" && ok "mac/karabiner/karabiner.json"
-      [[ -d $HOME/.config/karabiner/assets ]] && run cp -R "$HOME/.config/karabiner/assets" "$DOTFILES/mac/karabiner/"
-    fi
-    [[ -f $HOME/.config/linearmouse/linearmouse.json ]] && \
-      run cp "$HOME/.config/linearmouse/linearmouse.json" "$DOTFILES/mac/" && ok "mac/linearmouse.json"
-  fi
-  log "完成。記得 git commit 後推上去。"
+  # 其他設定檔：這台和 repo 不同的才存回去
+  local src dst
+  while IFS='|' read -r src dst; do
+    [[ $src == vscode/* ]] && continue            # 上面處理過
+    [[ -e $dst ]] && ! linked "$dst" || continue
+    if [[ -e $DOTFILES/$src ]] && same "$DOTFILES/$src" "$dst"; then continue; fi
+    run rm -rf "$DOTFILES/$src"
+    run mkdir -p "$(dirname "$DOTFILES/$src")"
+    run cp -R "$dst" "$DOTFILES/$src" && ok "$src ← $dst"
+  done < <(config_pairs)
+  log "完成。先用 git diff 看一下，不想要的用 git checkout <檔案> 還原，再 commit 推上去。"
 }
 
 # ---------------------------------------------------------------- main
-usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; }
 
 DO_BACKUP=0
+DO_DIFF=0
 for arg in "$@"; do
   case $arg in
     --dry-run) DRY_RUN=1 ;;
     --backup)  DO_BACKUP=1 ;;
+    --force)   FORCE=1 ;;
+    --diff)    DO_DIFF=1 ;;
     -h|--help) usage; exit 0 ;;
     *) warn "未知參數：$arg"; usage; exit 1 ;;
   esac
 done
 
 (( DRY_RUN )) && log "DRY RUN：只顯示動作，不會改任何東西"
+if (( DO_DIFF )); then diff_configs; exit 0; fi
 if (( DO_BACKUP )); then backup; exit 0; fi
 
 case $OS in
@@ -275,7 +314,7 @@ esac
 install_herdr_core
 install_claude_code
 install_zsh_plugins
-link_configs
+install_configs
 install_vscode_extensions
 set_default_shell
 
