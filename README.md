@@ -17,6 +17,8 @@ git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
 | `./bootstrap.sh --force` | 和 repo 不同的設定檔也用 repo 版本覆蓋（舊的備份成 `*.bak.<時間>`） |
 | `./bootstrap.sh --backup` | 反過來：某台試出喜歡的設定，存回 repo 當下一台的初始設定。之後先 `git diff` 挑過再 commit |
 
+之前用舊版（symlink）裝過的電腦：`git pull` 後重跑一次 `./bootstrap.sh`，連結會自動換成複製，內容不變。
+
 ## 盤點
 
 | 類別 | 工具 | Mac | Linux 桌機 | Server | 怎麼裝 |
