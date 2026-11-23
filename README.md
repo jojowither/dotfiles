@@ -31,6 +31,7 @@ git clone <你的 repo> ~/dotfiles && cd ~/dotfiles
 | Agent | Herdr app | ✓ | — | — | brew cask `herdr-app` |
 | Agent | herdr-core（`hc`） | ✓ | ✓ | ✓ | 官方腳本，裝到 `~/.local/bin`，之後由 Herdr 自動更新 |
 | Agent | Claude Code（`claude`） | ✓ | ✓ | ✓ | 官方 native installer，裝到 `~/.local/bin`，會自動更新 |
+| Agent | Claude plugins：mattpocock-skills | ✓ | ✓ | ✓ | `claude/plugins.txt`，裝好後自動更新 |
 | 字型 | JetBrainsMono / Meslo Nerd Font | ✓ | — | — | brew cask（server 不需要，字型由本機終端負責） |
 | 編輯器 | VS Code + 插件 | ✓ | ✓ | — | cask；插件清單在 `vscode/extensions.txt` |
 | 系統 | LinearMouse、Karabiner-Elements | ✓ | — | — | brew cask，設定從 `mac/` 複製回去 |
@@ -49,12 +50,14 @@ zsh/.zshrc              → ~/.zshrc
 config/starship.toml    → ~/.config/starship.toml
 config/ghostty/config   → ~/.config/ghostty/config（Mac）
 vscode/                 插件清單＋（backup 後）settings / keybindings
-mac/                    Karabiner、LinearMouse 設定（backup 後產生）
+mac/                    Karabiner、LinearMouse 設定（用 --backup 從某台匯出；綁的是那台的鍵盤和滑鼠型號）
 claude/statusline.py    → ~/.claude/statusline.py（並寫進 ~/.claude/settings.json 的 statusLine）
-herdr/mods/status-bar   → ~/.config/herdr-app/mods/底部狀態列：分支、agent、Claude 用量、reset 時間、用完預估
-herdr/mods/agents-plus  → ~/.config/herdr-app/mods/內建 agents 列表的複製版，多一行：模型 · ctx % · +改動行數
-herdr/themes/           → ~/.config/herdr-app/themes/Catppuccin Mocha
-herdr/layouts/mine.json → ~/.config/herdr-app/layouts/主題、字型、狀態列都設在這裡
+claude/CLAUDE.md        → ~/.claude/CLAUDE.md 所有專案共用的 Claude 習慣（含何時提醒用哪個 skill）
+claude/plugins.txt      Claude Code plugins 清單，bootstrap 用 claude plugin install 安裝
+herdr/mods/status-bar   → ~/.config/herdr-app/mods/ 底部狀態列：分支、agent、Claude 用量、reset 時間、用完預估
+herdr/mods/agents-plus  → ~/.config/herdr-app/mods/ 內建 agents 列表的複製版（複製自 Herdr agents mod 0.1.16，Herdr 更新後可能要重新同步），多一行：模型 · ctx % · +改動行數
+herdr/themes/           → ~/.config/herdr-app/themes/ Catppuccin Mocha
+herdr/layouts/mine.json → ~/.config/herdr-app/layouts/ 主題、字型、狀態列都設在這裡
 ```
 
 ## Herdr
@@ -64,19 +67,29 @@ herdr/layouts/mine.json → ~/.config/herdr-app/layouts/主題、字型、狀態
 - 用完預估：依最近的用量速度推算。撐得到 reset 顯示 `on track`，撐不到顯示 `limit ~14:20`；取樣不夠（5h 少於 10 分鐘、week 少於 2 小時）就不顯示。取樣存在 `~/.cache/claude-usage/history.json`。
 - Agents 列表：每個 Claude agent 下面多一行 `Opus 5.5 · ctx 42% · +120 −30`（ctx ≥60% 黃、≥80% 紅）。靠 Herdr 設在終端機裡的 `$HC_TERMINAL_ID` 對應，所以只有在 Herdr 裡跑的 Claude 才有；資料在 `~/.cache/claude-usage/agents/`。
 - 提醒：Dock 圖示的紅色數字是在等你的 agent 數；用量超過 80%、95% 各跳一次通知。agent 卡住或做完的音效和通知是 Herdr 內建的（Settings → Alerts）。
+- Herdr 一律裝最新版。`agents-plus` 和 `mine.json` 是從 0.1.16 複製的：bootstrap 和 `--diff` 最後會檢查自訂 mod 在目前版本能不能載入，版本不同也會提醒，新版內建若有新功能要自己合併。
 - 改狀態列：直接改這台的 `~/.config/herdr-app/mods/status-bar/main.js`，Herdr 會自動重新載入；跑 `herdr-app check ~/.config/herdr-app/mods/status-bar` 可檢查有沒有寫錯。想讓下一台也用，再 `./bootstrap.sh --backup` 存回 repo。
+
+## Claude Code skills（mattpocock-skills）
+
+- 有些 skill 會自動觸發（`tdd`、`diagnosing-bugs`、`code-review`、`pr`…），有些要自己打指令。手動的那些，`claude/CLAUDE.md` 會請 Claude 在適合的時候提醒你。
+- 每個 repo 第一次用之前跑一次 `/setup-matt-pocock-skills`（設定 issue tracker、標籤、文件位置）。
+
+| 時機 | 指令 |
+|---|---|
+| 開始做新功能、需求還模糊 | `/grill-with-docs`（非程式：`/grill-me`） |
+| 討論完，整理成規格 / 拆工作 | `/to-spec` → `/to-tickets` → `/implement` |
+| 超大工作，跨好幾個 session | `/wayfinder` |
+| 程式越來越亂 | `/improve-codebase-architecture` |
+| 換 session 接手 / 做完回顧 | `/handoff`、`/retro` |
+| 不知道用哪個 | `/ask-matt` |
 
 ## 機器專屬設定
 
 `~/.zshrc` 是各台自己的檔案，直接改就好。只有 API key 這類不能進 repo 的東西建議放 `~/.zshrc.local`（`.zshrc` 會自動載入），之後跑 `--backup` 存回 repo 時才不會被一起帶進去。例如：
 
 ```zsh
-export PATH="$HOME/.gemini/antigravity/bin:$PATH"
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+export OPENAI_API_KEY="..."                # API key
+export PATH="$HOME/some-tool/bin:$PATH"     # 只有這台才裝的工具
+export HTTPS_PROXY="http://proxy.example:8080"  # 公司網路
 ```
-
-## 從 Oh My Zsh + p10k 遷移
-
-第一次在現有電腦上跑時，舊的 `~/.zshrc` 會被備份成 `~/.zshrc.bak.<時間>`。確定沒問題後可移除：
-`rm -rf ~/.oh-my-zsh ~/.p10k.zsh`。原本 OMZ `git` 插件常用的 alias（`gst`、`gco`、`gp`…）已內建在 `.zshrc`。

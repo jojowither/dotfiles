@@ -65,6 +65,7 @@ config_pairs() {
   echo "zsh/.zshrc|$HOME/.zshrc"
   echo "config/starship.toml|$cfg/starship.toml"
   echo "claude/statusline.py|$HOME/.claude/statusline.py"
+  echo "claude/CLAUDE.md|$HOME/.claude/CLAUDE.md"
   if [[ $OS == Darwin ]]; then
     echo "config/ghostty/config|$HOME/.config/ghostty/config"
     echo "mac/karabiner/karabiner.json|$HOME/.config/karabiner/karabiner.json"
@@ -167,6 +168,43 @@ install_claude_code() {
   if have claude || [[ -x $HOME/.local/bin/claude ]]; then ok "claude 已安裝"; return; fi
   run bash -c 'curl -fsSL https://claude.ai/install.sh | bash' \
     || warn "Claude Code 安裝失敗，可手動執行：curl -fsSL https://claude.ai/install.sh | bash"
+}
+
+# Claude Code plugins：清單在 claude/plugins.txt，裝好之後 Claude Code 會自己更新
+install_claude_plugins() {
+  log "Claude Code plugins"
+  local cli=claude; have claude || cli="$HOME/.local/bin/claude"
+  [[ -x $(command -v "$cli") ]] || { warn "找不到 claude，略過 plugins"; return; }
+  local installed p
+  installed="$("$cli" plugin list 2>/dev/null || true)"
+  while IFS= read -r p; do
+    [[ -z $p || $p == \#* ]] && continue
+    if grep -qF "$p" <<<"$installed"; then ok "${p}（已安裝）"
+    else run "$cli" plugin install "$p" >/dev/null && ok "${p}（新安裝）" || warn "$p 安裝失敗"; fi
+  done < "$DOTFILES/claude/plugins.txt"
+}
+
+# Herdr app 一律裝最新版；自訂的 mod / layout 是從某一版複製來的，
+# 版本不同時檢查還能不能正常載入，避免更新後設定默默壞掉
+check_herdr() {
+  [[ $OS == Darwin ]] && have herdr-app || return 0
+  log "Herdr 自訂設定檢查"
+  local app_ver f m from
+  app_ver="$(herdr-app --version 2>/dev/null | awk '{print $NF}')"
+  for f in "$DOTFILES"/herdr/mods/*/mod.json "$DOTFILES"/herdr/layouts/*.json; do
+    from="$(python3 -c 'import json,sys; c=json.load(open(sys.argv[1])).get("cloned_from") or {}; print(c.get("name",""), c.get("version",""))' "$f" 2>/dev/null || true)"
+    [[ -n ${from// } ]] || continue
+    if [[ ${from##* } != "$app_ver" ]]; then
+      warn "$(basename "$(dirname "$f")")/$(basename "$f")：複製自 Herdr ${from##* } 的 ${from% *}，現在是 ${app_ver}；新版內建的若有新功能，需要手動合併"
+    fi
+  done
+  for m in "$DOTFILES"/herdr/mods/*/; do
+    m="$HOME/.config/herdr-app/mods/$(basename "$m")"
+    [[ -d $m ]] || continue
+    if (( DRY_RUN )); then printf '  + herdr-app check %s\n' "$m"
+    elif herdr-app check "$m" >/dev/null 2>&1; then ok "$(basename "$m") 可正常載入（Herdr ${app_ver}）"
+    else warn "$(basename "$m") 在 Herdr ${app_ver} 載入失敗，執行 herdr-app check $m 看原因"; fi
+  done
 }
 
 install_zsh_plugins() {
@@ -303,7 +341,7 @@ for arg in "$@"; do
 done
 
 (( DRY_RUN )) && log "DRY RUN：只顯示動作，不會改任何東西"
-if (( DO_DIFF )); then diff_configs; exit 0; fi
+if (( DO_DIFF )); then diff_configs; check_herdr; exit 0; fi
 if (( DO_BACKUP )); then backup; exit 0; fi
 
 case $OS in
@@ -313,8 +351,10 @@ case $OS in
 esac
 install_herdr_core
 install_claude_code
+install_claude_plugins
 install_zsh_plugins
 install_configs
+check_herdr
 install_vscode_extensions
 set_default_shell
 
